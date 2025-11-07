@@ -1,9 +1,7 @@
 streamlit
 langchain
-langgraph
 openai
 tiktoken
-metadata
 aiohappyeyeballs
 aiohttp
 aisignal

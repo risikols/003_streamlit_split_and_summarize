@@ -4,7 +4,6 @@ openai
 tiktoken
 aiohappyeyeballs
 aiohttp
-aisignal
 altair
 blinker
 cachetools

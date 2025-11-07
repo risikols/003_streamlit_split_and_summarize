@@ -64,3 +64,6 @@ pydantic-core
 pyarrow
 protobuf
 pillow
+pandas
+orjson
+packaging

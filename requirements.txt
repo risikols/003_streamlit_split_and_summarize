@@ -5,7 +5,7 @@ openai
 tiktoken
 metadata
 aiohappyeyeballs
-aihttp
+aiohttp
 aisignal
 altair
 blinker

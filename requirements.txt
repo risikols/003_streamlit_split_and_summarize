@@ -4,17 +4,15 @@ streamlit==1.37.0
 # PDF handling
 PyPDF2==3.0.1
 
-# LangChain compatible con Python 3.11
-langchain==0.1.0
+# LangChain compatible con tu main.py
+langchain==0.0.300
 
 # Vector database
 faiss-cpu==1.12.0
 
 # OpenAI
-openai>=2.7.1
-
-# Tiktoken necesario para OpenAI embeddings
-tiktoken>=0.3.3
+openai==2.7.1
+tiktoken>=0.4.0,<0.13.0
 
 # Dependencias necesarias de Streamlit
 numpy==1.26.4

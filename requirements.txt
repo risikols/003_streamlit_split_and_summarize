@@ -1,9 +1,9 @@
-streamlit
-langchain
-openai
+streamlit==1.51.0
+langchain==1.0.5
+langchain-openai==1.0.2
+openai==1.58.1
 tiktoken
 aiohttp
-langchain-openai
 langsmith
 markdown-it-py
 markupsafe
@@ -26,7 +26,7 @@ smmap
 six
 rpds-py
 rich
-requests          
+requests     
 regex
 referencing
 pyyaml
@@ -41,4 +41,3 @@ pillow
 pandas
 orjson
 packaging
-

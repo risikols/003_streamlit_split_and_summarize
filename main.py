@@ -1,56 +1,53 @@
 import streamlit as st
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
+from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
-from langchain.document_loaders import UnstructuredPDFLoader
+from PyPDF2 import PdfReader
 import os
 
-# Configuración del API Key de OpenAI
+st.set_page_config(page_title="PDF Split & Summarize", layout="wide")
+
+# Configuración de API Key
 if "OPENAI_API_KEY" not in st.secrets:
-    st.error("Por favor configura tu API Key de OpenAI en los secretos de Streamlit")
-    st.stop()
+    st.warning("Please set your OpenAI API key in Streamlit secrets.")
+openai_api_key = st.secrets.get("OPENAI_API_KEY", "")
 
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+st.title("PDF Split & Summarize")
 
-st.title("Split and Summarize PDF")
+uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
 
-# Subir archivo PDF
-uploaded_file = st.file_uploader("Sube tu PDF", type=["pdf"])
 if uploaded_file:
-    # Guardar temporalmente el PDF
-    with open("temp.pdf", "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    pdf = PdfReader(uploaded_file)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text() + "\n"
 
-    # Cargar PDF
-    loader = UnstructuredPDFLoader("temp.pdf")
-    documents = loader.load()
+    st.subheader("PDF content loaded")
+    st.write(text[:500] + "...")  # mostrar solo los primeros 500 caracteres
 
-    st.write(f"Documentos cargados: {len(documents)} páginas")
-
-    # Dividir el texto en chunks
-    text_splitter = RecursiveCharacterTextSplitter(
+    # Splitter
+    splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
-        chunk_overlap=200
+        chunk_overlap=200,
+        separators=["\n\n", "\n", " ", ""]
     )
-    docs = text_splitter.split_documents(documents)
-    st.write(f"Documentos divididos en chunks: {len(docs)}")
+    chunks = splitter.split_text(text)
+    st.write(f"Total chunks created: {len(chunks)}")
 
-    # Crear embeddings y vectorstore
-    embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(docs, embeddings)
+    # Embeddings
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    vectorstore = FAISS.from_texts(chunks, embeddings)
 
-    # Crear chain de QA
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=OpenAI(temperature=0),
-        chain_type="stuff",
-        retriever=vectorstore.as_retriever()
-    )
+    # QA Chain
+    llm = OpenAI(openai_api_key=openai_api_key, temperature=0)
+    qa_chain = load_qa_chain(llm, chain_type="stuff")
 
-    # Interfaz de consulta
-    query = st.text_input("Pregunta sobre el documento:")
+    query = st.text_input("Ask a question about your PDF:")
+
     if query:
-        answer = qa_chain.run(query)
-        st.write("Respuesta:")
+        docs = vectorstore.similarity_search(query)
+        answer = qa_chain.run(input_documents=docs, question=query)
+        st.subheader("Answer")
         st.write(answer)

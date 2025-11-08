@@ -1,19 +1,8 @@
-# Core
 streamlit==1.37.0
-
-# PDF handling
 PyPDF2==3.0.1
-
-# LangChain compatible con tu código
-langchain==1.0.5
-
-# Vector database
+langchain==0.0.300
 faiss-cpu==1.12.0
-
-# OpenAI
-openai>=2.7.1
-
-# Dependencias necesarias de Streamlit
+openai==2.7.1
 numpy==1.26.4
 pandas==2.3.3
 altair==5.5.0
@@ -23,4 +12,3 @@ requests==2.32.5
 rich<14,>=10.14.0
 watchdog==4.0.2
 typing-extensions==4.15.0
-

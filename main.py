@@ -1,84 +1,51 @@
-import os
 import streamlit as st
-from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
+from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
+from PyPDF2 import PdfReader
+import os
 
-# ===============================
-# Configuración API Key OpenAI
-# ===============================
+# Configuración de la API de OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 if not OPENAI_API_KEY:
-    st.error(
-        "⚠️ No se encontró la variable de entorno OPENAI_API_KEY. "
-        "Por favor configúrala en Streamlit Cloud (Settings → Secrets)."
-    )
-    st.stop()
+    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY")
 else:
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-# ===============================
-# Título de la app
-# ===============================
-st.title("📄 Resumen de PDFs con LangChain y OpenAI")
+st.title("Resumen de documentos con LangChain y Streamlit")
 
-# ===============================
-# Carga del PDF
-# ===============================
 uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
-    try:
-        pdf = PdfReader(uploaded_file)
-        text = ""
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text
+    pdf = PdfReader(uploaded_file)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text() or ""
 
-        if not text:
-            st.warning("El PDF no contiene texto legible.")
-            st.stop()
-
-        # ===============================
-        # División de texto
-        # ===============================
+    if not text:
+        st.warning("No se pudo extraer texto del PDF.")
+    else:
+        # Dividir el texto en fragmentos
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100
         )
         chunks = text_splitter.split_text(text)
 
-        # ===============================
-        # Crear embeddings y vectorstore
-        # ===============================
+        # Crear embeddings y base vectorial
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_texts(chunks, embeddings)
 
-        # ===============================
-        # Configurar QA
-        # ===============================
-        qa = RetrievalQA.from_chain_type(
-            llm=OpenAI(),
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever()
-        )
+        # Crear cadena de QA
+        llm = OpenAI()
+        qa_chain = load_qa_chain(llm, chain_type="stuff")
 
-        # ===============================
-        # Pregunta del usuario
-        # ===============================
+        # Consulta al usuario
         query = st.text_input("Escribe tu pregunta sobre el PDF:")
         if query:
-            with st.spinner("🧠 Procesando tu consulta..."):
-                answer = qa.run(query)
-            st.success("✅ Respuesta:")
+            retriever = vectorstore.as_retriever()
+            docs = retriever.get_relevant_documents(query)
+            answer = qa_chain.run(input_documents=docs, question=query)
             st.write(answer)
-
-    except Exception as e:
-        st.error(f"Error al procesar el PDF: {e}")
-else:
-    st.info("Sube un PDF para empezar a interactuar.")

@@ -1,20 +1,16 @@
-# Core
 streamlit==1.37.0
-rich==14.2.0
+rich==13.3.5         # Compatible con Streamlit 1.37.0 (<14)
 watchdog==3.0.0
-regex==2023.10.22
+regex==2022.10.31     # Última versión compatible con Python 3.11 en Cloud
 numpy==1.25.2
 pandas==2.0.3
 tqdm==4.67.1
-
-# LLM / LangChain
 langchain==1.0.5
 openai==2.7.1
 tiktoken==0.12.0
-
-# Async / HTTP
 aiohttp==3.8.4
 yarl==1.9.2
 multidict==6.0.4
 async-timeout==4.0.2
 sniffio==1.3.1
+

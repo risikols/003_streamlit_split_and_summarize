@@ -1,54 +1,59 @@
 import streamlit as st
-import regex as re
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import RetrievalQA
+from langchain.chains.summarize import load_summarize_chain
+from langchain.llms import OpenAI
+import os
+import tempfile
+import regex
 
-# Configuración de la app
-st.set_page_config(page_title="Split & Summarize", layout="wide")
-st.title("Split & Summarize Documents")
+# Configuración de la API de OpenAI
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
+    st.error("Por favor, configura la variable de entorno OPENAI_API_KEY")
+    st.stop()
 
-# Sidebar
-st.sidebar.header("Configuración")
-openai_api_key = st.sidebar.text_input("API Key de OpenAI", type="password")
+# Título
+st.title("Split & Summarize")
 
-# Subida de documentos
-uploaded_files = st.file_uploader("Sube tus documentos (PDF, TXT, DOCX)", accept_multiple_files=True)
+# Cargar archivo
+uploaded_file = st.file_uploader("Sube un archivo TXT o PDF", type=["txt", "pdf"])
+if uploaded_file:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(uploaded_file.read())
+        file_path = tmp_file.name
 
-if uploaded_files and openai_api_key:
-    texts = []
-    for file in uploaded_files:
-        # Lectura simple de TXT
-        try:
-            content = file.read().decode("utf-8", errors="ignore")
-            texts.append(content)
-        except Exception as e:
-            st.error(f"No se pudo leer {file.name}: {e}")
+    # Leer texto del archivo
+    if uploaded_file.type == "text/plain":
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+    else:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(file_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
 
     # Dividir el texto
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
-        chunk_overlap=100
+        chunk_overlap=200
     )
-    docs = text_splitter.create_documents(texts)
+    docs = text_splitter.split_text(text)
 
-    # Embeddings
+    # Crear embeddings y base de datos FAISS
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-    vectorstore = FAISS.from_documents(docs, embeddings)
+    vectorstore = FAISS.from_texts(docs, embeddings)
 
-    # Crear chain de QA
-    qa = RetrievalQA.from_chain_type(
-        llm=ChatOpenAI(openai_api_key=openai_api_key, temperature=0),
-        retriever=vectorstore.as_retriever(),
-        chain_type="stuff"
-    )
+    # Configurar LLM
+    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
 
-    # Pregunta
-    query = st.text_input("Escribe tu pregunta sobre los documentos")
-    if query:
-        answer = qa.run(query)
-        st.write("**Respuesta:**", answer)
-else:
-    st.info("Sube archivos y proporciona tu API Key de OpenAI para empezar.")
+    # Cadena de resumen
+    chain = load_summarize_chain(llm, chain_type="map_reduce")
+
+    # Ejecutar resumen
+    summary = chain.run(docs)
+    st.subheader("Resumen")
+    st.write(summary)
+)

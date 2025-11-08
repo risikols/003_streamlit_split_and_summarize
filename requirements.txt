@@ -2,7 +2,6 @@ streamlit==1.37.0
 rich>=14.2.0
 langchain>=1.0.5
 watchdog>=3.0.0
-regex>=2025.7.34  # versión estable compatible con Python 3.11
-markdown-it-py>=4.0.0
-pygments>=2.19.2
-mdurl>=0.1.2
+regex>=2025.7.34
+faiss-cpu>=1.7.4
+openai>=1.0.0

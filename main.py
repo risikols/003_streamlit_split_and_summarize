@@ -1,74 +1,62 @@
-# main_streamlit_progress.py
+# main.py
 import streamlit as st
-from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from openai import OpenAI
+import PyPDF2
+import openai
 from openai.error import OpenAIError
-import time
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# Inicializar cliente OpenAI
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Configurar API key
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-st.set_page_config(page_title="PDF Split & Summarize", layout="wide")
-st.title("📄 PDF Split & Summarize (con progreso)")
+st.title("📄 PDF Split & Summarize")
 
-uploaded_file = st.file_uploader("Sube tu PDF", type=["pdf"])
+uploaded_file = st.file_uploader("Sube tu archivo PDF", type=["pdf"])
 
-def summarize_text(text_chunk, model="gpt-3.5-turbo"):
-    """
-    Genera un resumen de un fragmento de texto usando OpenAI
-    """
+def extract_text(pdf_file):
+    pdf_reader = PyPDF2.PdfReader(pdf_file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
+
+def split_text(text, chunk_size=1000, chunk_overlap=50):
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
+    return splitter.split_text(text)
+
+def summarize_chunk(chunk):
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "Eres un asistente que resume texto largo en resúmenes claros y concisos."},
-                {"role": "user", "content": text_chunk}
-            ],
-            temperature=0.5
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": f"Resume este texto:\n{chunk}"}],
+            temperature=0.3
         )
-        return response.choices[0].message.content
+        return response.choices[0].message["content"].strip()
     except OpenAIError as e:
-        st.error(f"Error con OpenAI: {e}")
+        st.error(f"Error procesando el fragmento: {e}")
         return None
 
 if uploaded_file:
-    # Leer PDF
-    pdf = PdfReader(uploaded_file)
-    text = ""
-    for page in pdf.pages:
-        text += page.extract_text() + "\n"
+    text = extract_text(uploaded_file)
+    if not text.strip():
+        st.error("No se pudo extraer texto del PDF.")
+    else:
+        st.info("Dividiendo el texto en fragmentos...")
+        chunks = split_text(text)
+        st.success(f"Texto dividido en {len(chunks)} fragmentos.")
 
-    # Dividir en fragmentos
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100,
-        separators=["\n", " "]
-    )
-    chunks = splitter.split_text(text)
-    st.write(f"Texto dividido en {len(chunks)} fragmentos.")
+        st.info("Generando resúmenes de cada fragmento...")
+        summaries = []
+        for i, chunk in enumerate(chunks, 1):
+            st.write(f"Procesando fragmento {i}/{len(chunks)}...")
+            summary = summarize_chunk(chunk)
+            if summary:
+                summaries.append(summary)
 
-    # Crear barra de progreso
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    # Map step: resumir cada fragmento
-    summaries = []
-    for i, chunk in enumerate(chunks):
-        status_text.text(f"Procesando fragmento {i+1}/{len(chunks)}...")
-        summary = summarize_text(chunk, model="gpt-3.5-turbo")
-        if summary:
-            summaries.append(summary)
-        progress_bar.progress((i + 1) / len(chunks))
-        time.sleep(0.1)  # pequeño delay para que la barra se actualice
-
-    # Reduce step: resumir los resúmenes
-    if summaries:
-        combined_text = "\n".join(summaries)
-        st.write("Generando resumen final...")
-        final_summary = summarize_text(combined_text, model="gpt-3.5-turbo")
-        st.success("✅ Resumen final generado")
-        st.text_area("Resumen Final", final_summary, height=300)
-
-    progress_bar.empty()
-    status_text.empty()
+        if summaries:
+            st.info("Generando resumen final...")
+            final_summary = summarize_chunk(" ".join(summaries))
+            st.subheader("Resumen final")
+            st.write(final_summary)

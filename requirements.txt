@@ -26,7 +26,7 @@ smmap
 six
 rpds-py
 rich
-request
+requests          
 regex
 referencing
 pyyaml
@@ -35,10 +35,10 @@ python-dateutil
 pygments
 pydeck
 pydantic
-pydantic-core
 pyarrow
 protobuf
 pillow
 pandas
 orjson
 packaging
+

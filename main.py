@@ -1,42 +1,43 @@
 import streamlit as st
 import os
 from PyPDF2 import PdfReader
+
+# LangChain imports compatibles con 0.0.285
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.llms import OpenAI
 
-# Configurar la API Key de OpenAI desde Secrets
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Configuración de la API Key de OpenAI
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY")
+    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY en Streamlit Secrets")
 else:
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-st.title("Resumen de documentos con LangChain y Streamlit")
+st.title("Resumen de documentos PDF con LangChain y Streamlit")
 
-# Subida de archivo PDF
+# Subida de PDF
 uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
-    # Leer texto del PDF
     pdf = PdfReader(uploaded_file)
     text = ""
     for page in pdf.pages:
         text += page.extract_text() or ""
 
     if not text.strip():
-        st.error("No se pudo extraer texto del PDF.")
+        st.warning("No se pudo extraer texto del PDF.")
     else:
-        # Dividir el texto en fragmentos
+        # Dividir texto en fragmentos
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100
         )
         chunks = text_splitter.split_text(text)
 
-        # Crear embeddings y base vectorial
+        # Crear embeddings y vectorstore
         embeddings = OpenAIEmbeddings()
         vectorstore = FAISS.from_texts(chunks, embeddings)
 
@@ -47,9 +48,9 @@ if uploaded_file:
             retriever=vectorstore.as_retriever()
         )
 
-        # Consulta al usuario
+        # Input de consulta
         query = st.text_input("Escribe tu pregunta sobre el PDF:")
         if query:
-            with st.spinner("Buscando respuesta..."):
+            with st.spinner("Generando respuesta..."):
                 answer = qa.run(query)
-            st.write(answer)
+                st.write(answer)

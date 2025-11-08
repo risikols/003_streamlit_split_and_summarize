@@ -7,54 +7,51 @@ from langchain.llms import OpenAI
 from PyPDF2 import PdfReader
 import os
 
-# Configuración de la API de OpenAI
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY")
+# --- Configuración API Key ---
+if "OPENAI_API_KEY" not in st.secrets:
+    st.warning("Por favor agrega tu OPENAI_API_KEY en Secrets de Streamlit Cloud")
 else:
-    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 st.title("Resumen de documentos con LangChain y Streamlit")
 
+# --- Subida de PDF ---
 uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
-    try:
-        pdf = PdfReader(uploaded_file)
-        text = ""
-        for page in pdf.pages:
-            text += page.extract_text() or ""
+    pdf = PdfReader(uploaded_file)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text() or ""
 
-        if not text.strip():
-            st.warning("El PDF no contiene texto legible.")
-            st.stop()
+    if not text:
+        st.error("No se pudo extraer texto del PDF")
+    else:
+        # --- Spinner mientras procesa ---
+        with st.spinner("Procesando PDF y generando embeddings..."):
+            # Dividir el texto en fragmentos pequeños para no colgar la app
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=500,  # chunks más pequeños
+                chunk_overlap=50
+            )
+            chunks = text_splitter.split_text(text[:10000])  # prueba inicial con primeros 10k caracteres
 
-        # Dividir el texto en fragmentos
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=100
-        )
-        chunks = text_splitter.split_text(text)
+            # Crear embeddings y base vectorial
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_texts(chunks, embeddings)
 
-        # Crear embeddings y base vectorial
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_texts(chunks, embeddings)
+            # Crear cadena de QA
+            qa = RetrievalQA.from_chain_type(
+                llm=OpenAI(),
+                chain_type="stuff",
+                retriever=vectorstore.as_retriever()
+            )
 
-        # Crear cadena de QA
-        qa = RetrievalQA.from_chain_type(
-            llm=OpenAI(),
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever()
-        )
+        st.success("PDF procesado ✅")
 
-        # Consulta al usuario
+        # --- Consulta del usuario ---
         query = st.text_input("Escribe tu pregunta sobre el PDF:")
         if query:
-            try:
+            with st.spinner("Buscando respuesta..."):
                 answer = qa.run(query)
-                st.write(answer)
-            except Exception as e:
-                st.error(f"Ocurrió un error al procesar la pregunta: {e}")
-
-    except Exception as e:
-        st.error(f"Ocurrió un error al procesar el PDF: {e}")
+            st.write(answer)

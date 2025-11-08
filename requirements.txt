@@ -1,11 +1,6 @@
-# Streamlit y rich compatibles
 streamlit==1.37.0
 rich==13.3.5
-
-# LangChain (última versión estable en PyPI)
 langchain==1.0.5
-
-# Resto de dependencias
 watchdog==3.0.0
 regex==2023.10.22
 numpy==1.26.0

@@ -1,85 +1,53 @@
 import streamlit as st
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
+from langchain import PromptTemplate
+from langchain_openai import OpenAI
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import pandas as pd
 from io import StringIO
 
-# ------------------------------
-# LLM and API key loading function
-# ------------------------------
+# LLM loader
 def load_LLM(openai_api_key):
-    """
-    Crea un modelo de lenguaje usando ChatOpenAI.
-    """
-    llm = ChatOpenAI(
-        temperature=0,
-        openai_api_key=openai_api_key,
-        model_name="gpt-3.5-turbo"  # Puedes usar "gpt-4" si tu API key lo permite
-    )
+    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
     return llm
 
-# ------------------------------
-# Página y encabezado
-# ------------------------------
+# Page setup
 st.set_page_config(page_title="AI Long Text Summarizer")
 st.header("AI Long Text Summarizer")
 
-# Intro: instrucciones
+# Intro
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("ChatGPT no puede resumir textos muy largos. Ahora puedes hacerlo con esta app.")
-
+    st.markdown("ChatGPT cannot summarize long texts. Now you can do it with this app.")
 with col2:
-    st.write("Contacta con [AI Accelera](https://aiaccelera.com) para tus proyectos de IA")
+    st.write("Contact with [AI Accelera](https://aiaccelera.com) to build your AI Projects")
 
-# ------------------------------
-# Input de OpenAI API Key
-# ------------------------------
-st.markdown("## Ingresa tu OpenAI API Key")
+# OpenAI API Key
+st.markdown("## Enter Your OpenAI API Key")
+openai_api_key = st.text_input("OpenAI API Key", type="password", placeholder="Ex: sk-xxxx")
 
-def get_openai_api_key():
-    input_text = st.text_input(
-        label="OpenAI API Key",
-        placeholder="Ex: sk-...",
-        key="openai_api_key_input",
-        type="password"
-    )
-    return input_text
+# File uploader
+st.markdown("## Upload the text file you want to summarize")
+uploaded_file = st.file_uploader("Choose a file", type="txt")
 
-openai_api_key = get_openai_api_key()
-
-# ------------------------------
-# Input del archivo de texto
-# ------------------------------
-st.markdown("## Sube el archivo de texto que quieres resumir")
-uploaded_file = st.file_uploader("Elige un archivo", type="txt")
-
-# ------------------------------
-# Output: Resumen
-# ------------------------------
-st.markdown("### Aquí está tu resumen:")
+st.markdown("### Here is your Summary:")
 
 if uploaded_file is not None:
-    # Leer archivo como string
     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
     file_input = stringio.read()
 
-    # Validación de longitud
     if len(file_input.split(" ")) > 20000:
-        st.write("Por favor ingresa un archivo más corto. Máximo 20,000 palabras.")
+        st.write("Please enter a shorter file. Maximum 20000 words.")
         st.stop()
 
-    # Validar API Key
     if not openai_api_key:
         st.warning(
-            'Por favor ingresa tu OpenAI API Key. Instrucciones [aquí](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)',
+            'Please insert OpenAI API Key. Instructions [here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)', 
             icon="⚠️"
         )
         st.stop()
 
-    # Dividir texto en chunks
+    # Split text
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n"],
         chunk_size=5000,
@@ -87,16 +55,12 @@ if uploaded_file is not None:
     )
     splitted_documents = text_splitter.create_documents([file_input])
 
-    # Cargar LLM
-    llm = load_LLM(openai_api_key=openai_api_key)
+    # Load LLM
+    llm = load_LLM(openai_api_key)
 
-    # Cargar chain de resumen
-    summarize_chain = load_summarize_chain(
-        llm=llm,
-        chain_type="map_reduce"
-    )
-
-    # Ejecutar chain
+    # Summarize
+    summarize_chain = load_summarize_chain(llm=llm, chain_type="map_reduce")
     summary_output = summarize_chain.run(splitted_documents)
 
     st.write(summary_output)
+

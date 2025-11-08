@@ -1,22 +1,16 @@
 import streamlit as st
-import os
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+from langchain.llms import OpenAI
 from PyPDF2 import PdfReader
+import os
 
-# Manejo de errores en caso de dependencias faltantes
-try:
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain.embeddings import OpenAIEmbeddings
-    from langchain.vectorstores import FAISS
-    from langchain.chains import RetrievalQA
-    from langchain.llms import OpenAI
-except ImportError as e:
-    st.error(f"Falta una dependencia: {e}. Revisa tu requirements.txt")
-    st.stop()
-
-# Configuración API
+# Configuración de la API de OpenAI
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY en Streamlit Secrets")
+    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY en Secrets.")
     st.stop()
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
@@ -26,15 +20,17 @@ uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
     try:
+        # Leer PDF
         pdf = PdfReader(uploaded_file)
         text = ""
         for page in pdf.pages:
             text += page.extract_text() or ""
-        if not text:
-            st.warning("No se pudo extraer texto del PDF")
+
+        if not text.strip():
+            st.error("No se pudo extraer texto del PDF.")
             st.stop()
 
-        # Dividir texto en fragmentos
+        # Dividir el texto en fragmentos
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100
@@ -58,6 +54,7 @@ if uploaded_file:
             answer = qa.run(query)
             st.write(answer)
 
+    except ImportError as e:
+        st.error(f"Falta una dependencia: {e}")
     except Exception as e:
         st.error(f"❌ Ocurrió un error procesando el PDF: {e}")
-

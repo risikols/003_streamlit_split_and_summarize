@@ -1,63 +1,60 @@
 import streamlit as st
+from openai import OpenAI, OpenAIError
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.llms import OpenAI
-import os
 
-st.set_page_config(page_title="Resumen de PDFs", layout="wide")
-st.title("Resumen de documentos con LangChain y Streamlit")
+# Configuración del cliente OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])  # usa tu API key en Streamlit secrets
 
-# Configura tu clave desde Secrets de Streamlit
-OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY en Secrets")
-    st.stop()
-else:
-    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+st.set_page_config(page_title="PDF Split & Summarize", layout="wide")
+st.title("📄 PDF Split & Summarize con OpenAI y LangChain")
 
 # Subida de PDF
-uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
-if uploaded_file:
+uploaded_file = st.file_uploader("Sube tu PDF", type=["pdf"])
+
+if uploaded_file is not None:
     try:
-        pdf = PdfReader(uploaded_file)
+        # Leer PDF
+        reader = PdfReader(uploaded_file)
         text = ""
-        for page in pdf.pages:
+        for page in reader.pages:
             text += page.extract_text() or ""
 
-        if not text.strip():
-            st.warning("No se pudo extraer texto del PDF.")
-            st.stop()
+        st.success(f"PDF cargado con {len(reader.pages)} páginas.")
 
-        # Dividir texto en fragmentos
+        # Dividir el texto en fragmentos
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=100
+            chunk_size=1000,   # tamaño de cada fragmento
+            chunk_overlap=100  # solapamiento entre fragmentos
         )
-        chunks = splitter.split_text(text)
-        st.write(f"Texto dividido en {len(chunks)} fragmentos")
+        texts = splitter.split_text(text)
+        st.write(f"Texto dividido en {len(texts)} fragmentos.")
 
-        # Crear embeddings y vectorstore
-        embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-        vectorstore = FAISS.from_texts(chunks, embeddings)
+        # Botón para resumir cada fragmento
+        if st.button("📝 Resumir PDF"):
+            summaries = []
+            progress = st.progress(0)
+            for i, chunk in enumerate(texts):
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4",
+                        messages=[
+                            {"role": "system", "content": "Eres un asistente que resume texto."},
+                            {"role": "user", "content": f"Resume este texto:\n\n{chunk}"}
+                        ],
+                        temperature=0.5
+                    )
+                    summary = response.choices[0].message.content
+                    summaries.append(summary)
+                except OpenAIError as e:
+                    st.error(f"Error en fragmento {i+1}: {e}")
+                    summaries.append("[Error al generar resumen]")
+                progress.progress((i + 1) / len(texts))
 
-        # Cadena de QA
-        qa = RetrievalQA.from_chain_type(
-            llm=OpenAI(openai_api_key=OPENAI_API_KEY, temperature=0),
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever()
-        )
-
-        # Consulta del usuario
-        query = st.text_input("Escribe tu pregunta sobre el PDF:")
-        if query:
-            try:
-                answer = qa.run(query)
-                st.markdown(f"**Respuesta:** {answer}")
-            except Exception as e:
-                st.error(f"Ocurrió un error al procesar tu pregunta: {str(e)}")
+            # Mostrar resumen final
+            final_summary = "\n\n".join(summaries)
+            st.subheader("Resumen completo del PDF")
+            st.write(final_summary)
 
     except Exception as e:
-        st.error(f"❌ Ocurrió un error procesando el PDF: {str(e)}")
+        st.error(f"❌ Error procesando el PDF: {e}")

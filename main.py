@@ -1,9 +1,9 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from openai import OpenAI
+import openai
 
-# Inicializa el cliente de OpenAI
-client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
+# Configura tu API key desde secrets
+openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 st.set_page_config(page_title="Split and Summarize", layout="wide")
 st.title("📄 PDF Split & Summarize")
@@ -22,7 +22,7 @@ if uploaded_file:
 
     if st.button("Generar resumen"):
         try:
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Eres un asistente que resume documentos."},
@@ -35,3 +35,4 @@ if uploaded_file:
             st.write(resumen)
         except Exception as e:
             st.error(f"Ocurrió un error al generar el resumen: {e}")
+

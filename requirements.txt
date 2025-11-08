@@ -1,8 +1,7 @@
 streamlit==1.37.0
+regex>=2025.7.34
 rich>=14.2.0
 langchain>=1.0.5
 watchdog>=3.0.0
-regex>=2025.7.34
 faiss-cpu>=1.7.4
 openai>=1.0.0
-

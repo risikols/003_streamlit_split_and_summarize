@@ -1,22 +1,9 @@
-# Core
 streamlit==1.37.0
-
-# PDF handling
 PyPDF2==3.0.1
-
-# LangChain
 langchain==0.0.300
-
-# Vector database
 faiss-cpu==1.12.0
-
-# OpenAI
 openai==2.27.6
-
-# Tiktoken necesario para embeddings OpenAI
 tiktoken==0.12.3
-
-# Dependencias necesarias de Streamlit y otras librerías
 numpy==1.26.4
 pandas==2.3.3
 altair==5.5.0

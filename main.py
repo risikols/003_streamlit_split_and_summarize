@@ -1,66 +1,61 @@
 import streamlit as st
-from langchain import PromptTemplate
-from langchain_openai import OpenAI
-from langchain.chains.summarize import load_summarize_chain
+from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import pandas as pd
-from io import StringIO
+from langchain.chains import LLMChain
+from langchain.llms import OpenAI
 
-# LLM loader
-def load_LLM(openai_api_key):
-    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
-    return llm
+# Configuración de la app
+st.set_page_config(page_title="Split and Summarize", layout="wide")
 
-# Page setup
-st.set_page_config(page_title="AI Long Text Summarizer")
-st.header("AI Long Text Summarizer")
+st.title("📄 Split & Summarize Documents")
+st.write("Sube un documento, divídelo en partes y genera un resumen con LLM.")
 
-# Intro
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown("ChatGPT cannot summarize long texts. Now you can do it with this app.")
-with col2:
-    st.write("Contact with [AI Accelera](https://aiaccelera.com) to build your AI Projects")
+# Cargar archivo
+uploaded_file = st.file_uploader("Selecciona un archivo de texto (.txt)", type="txt")
 
-# OpenAI API Key
-st.markdown("## Enter Your OpenAI API Key")
-openai_api_key = st.text_input("OpenAI API Key", type="password", placeholder="Ex: sk-xxxx")
-
-# File uploader
-st.markdown("## Upload the text file you want to summarize")
-uploaded_file = st.file_uploader("Choose a file", type="txt")
-
-st.markdown("### Here is your Summary:")
-
-if uploaded_file is not None:
-    stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-    file_input = stringio.read()
-
-    if len(file_input.split(" ")) > 20000:
-        st.write("Please enter a shorter file. Maximum 20000 words.")
-        st.stop()
-
-    if not openai_api_key:
-        st.warning(
-            'Please insert OpenAI API Key. Instructions [here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)', 
-            icon="⚠️"
-        )
-        st.stop()
-
-    # Split text
+if uploaded_file:
+    text = uploaded_file.read().decode("utf-8")
+    
+    # Selector de tamaño de chunk
+    chunk_size = st.slider("Tamaño del chunk (caracteres)", 1000, 5000, 2000)
+    
+    # Dividir el texto en chunks
     text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n"],
-        chunk_size=5000,
-        chunk_overlap=350
+        chunk_size=chunk_size,
+        chunk_overlap=100
     )
-    splitted_documents = text_splitter.create_documents([file_input])
+    chunks = text_splitter.split_text(text)
+    
+    st.write(f"El documento se dividió en **{len(chunks)}** partes.")
+    
+    # Mostrar primeros 2 chunks como ejemplo
+    for i, chunk in enumerate(chunks[:2]):
+        st.subheader(f"Chunk {i+1}")
+        st.write(chunk)
+    
+    # Resumen con LLM
+    st.subheader("Resumen del Documento")
+    
+    # Ingresar API Key de OpenAI
+    openai_api_key = st.text_input("Introduce tu OpenAI API Key", type="password")
+    
+    if openai_api_key:
+        llm = OpenAI(openai_api_key=openai_api_key, temperature=0)
+        
+        # Plantilla de resumen
+        template = """Resume el siguiente texto en español de manera clara y concisa:
 
-    # Load LLM
-    llm = load_LLM(openai_api_key)
-
-    # Summarize
-    summarize_chain = load_summarize_chain(llm=llm, chain_type="map_reduce")
-    summary_output = summarize_chain.run(splitted_documents)
-
-    st.write(summary_output)
-
+        {text_chunk}
+        """
+        prompt = PromptTemplate(input_variables=["text_chunk"], template=template)
+        chain = LLMChain(llm=llm, prompt=prompt)
+        
+        # Generar resúmenes por chunk y combinarlos
+        summaries = []
+        for chunk in chunks:
+            summary = chain.run(text_chunk=chunk)
+            summaries.append(summary)
+        
+        final_summary = "\n\n".join(summaries)
+        
+        st.text_area("Resumen final", value=final_summary, height=300)

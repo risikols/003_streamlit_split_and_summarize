@@ -7,27 +7,26 @@ from langchain.llms import OpenAI
 from PyPDF2 import PdfReader
 import os
 
-# Configura tu API Key en Secrets de Streamlit
+# Configuración de la API de OpenAI desde Streamlit Secrets
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    st.warning("Por favor configura la variable de entorno OPENAI_API_KEY en Secrets")
+    st.warning("Por favor configura tu OPENAI_API_KEY en los Secrets")
 else:
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-st.title("Resumen de documentos con LangChain y Streamlit")
+st.title("Resumen de documentos PDF con LangChain y Streamlit")
 
+# Subida del archivo PDF
 uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
     try:
-        # Leer PDF
         pdf = PdfReader(uploaded_file)
         text = ""
         for page in pdf.pages:
             text += page.extract_text() or ""
-
         if not text:
-            st.warning("El PDF no contiene texto legible.")
+            st.error("No se pudo extraer texto del PDF.")
         else:
             # Dividir el texto en fragmentos
             text_splitter = RecursiveCharacterTextSplitter(
@@ -47,13 +46,10 @@ if uploaded_file:
                 retriever=vectorstore.as_retriever()
             )
 
-            # Consulta al usuario
+            # Consulta del usuario
             query = st.text_input("Escribe tu pregunta sobre el PDF:")
             if query:
                 answer = qa.run(query)
                 st.write(answer)
-
-    except ImportError as e:
-        st.error(f"Falta una dependencia: {e}")
     except Exception as e:
         st.error(f"❌ Ocurrió un error procesando el PDF: {e}")

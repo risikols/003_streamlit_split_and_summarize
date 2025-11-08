@@ -1,4 +1,4 @@
-# Core
+# Streamlit
 streamlit==1.37.0
 
 # PDF handling
@@ -7,20 +7,22 @@ PyPDF2==3.0.1
 # LangChain
 langchain==0.0.300
 
-# Vector database
+# FAISS for vector database
 faiss-cpu==1.12.0
 
-# OpenAI API
+# OpenAI
 openai==2.7.1
-tiktoken==0.12.0
 
-# Data & visualization
+# Dependencies for Streamlit
 numpy==1.26.4
 pandas==2.3.3
 altair==5.5.0
 pillow==10.4.0
 protobuf==5.29.5
 requests==2.32.5
-rich>=10.14.0,<15
+rich<14,>=10.14.0
 watchdog==4.0.2
 typing-extensions==4.15.0
+
+# Tiktoken compatible versión reciente
+tiktoken>=0.3.3

@@ -12,11 +12,12 @@ from io import StringIO
 def load_LLM(openai_api_key):
     """
     Crea un modelo de lenguaje usando ChatOpenAI.
+    Compatible con Python 3.11 y LangChain 1.0+
     """
     llm = ChatOpenAI(
         temperature=0,
         openai_api_key=openai_api_key,
-        model_name="gpt-3.5-turbo"  # Puedes usar "gpt-4" si tu API key lo permite
+        model_name="gpt-3.5-turbo"  # Cambiar a "gpt-4" si tu API key lo permite
     )
     return llm
 
@@ -100,4 +101,3 @@ if uploaded_file is not None:
     summary_output = summarize_chain.run(splitted_documents)
 
     st.write(summary_output)
-

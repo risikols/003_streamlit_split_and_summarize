@@ -1,97 +1,103 @@
 import streamlit as st
-from langchain_openai import OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import pandas as pd
 from io import StringIO
 
-#LLM and key loading function
+# ------------------------------
+# LLM and API key loading function
+# ------------------------------
 def load_LLM(openai_api_key):
-    # Make sure your openai_api_key is set as an environment variable
-    llm = OpenAI(temperature=0, openai_api_key=openai_api_key)
+    """
+    Crea un modelo de lenguaje usando ChatOpenAI.
+    """
+    llm = ChatOpenAI(
+        temperature=0,
+        openai_api_key=openai_api_key,
+        model_name="gpt-3.5-turbo"  # Puedes usar "gpt-4" si tu API key lo permite
+    )
     return llm
 
-
-#Page title and header
+# ------------------------------
+# Página y encabezado
+# ------------------------------
 st.set_page_config(page_title="AI Long Text Summarizer")
 st.header("AI Long Text Summarizer")
 
-
-#Intro: instructions
+# Intro: instrucciones
 col1, col2 = st.columns(2)
-
 with col1:
-    st.markdown("ChatGPT cannot summarize long texts. Now you can do it with this app.")
+    st.markdown("ChatGPT no puede resumir textos muy largos. Ahora puedes hacerlo con esta app.")
 
 with col2:
-    st.write("Contact with [AI Accelera](https://aiaccelera.com) to build your AI Projects")
+    st.write("Contacta con [AI Accelera](https://aiaccelera.com) para tus proyectos de IA")
 
-
-#Input OpenAI API Key
-st.markdown("## Enter Your OpenAI API Key")
+# ------------------------------
+# Input de OpenAI API Key
+# ------------------------------
+st.markdown("## Ingresa tu OpenAI API Key")
 
 def get_openai_api_key():
-    input_text = st.text_input(label="OpenAI API Key ",  placeholder="Ex: sk-2twmA8tfCb8un4...", key="openai_api_key_input", type="password")
+    input_text = st.text_input(
+        label="OpenAI API Key",
+        placeholder="Ex: sk-...",
+        key="openai_api_key_input",
+        type="password"
+    )
     return input_text
 
 openai_api_key = get_openai_api_key()
 
+# ------------------------------
+# Input del archivo de texto
+# ------------------------------
+st.markdown("## Sube el archivo de texto que quieres resumir")
+uploaded_file = st.file_uploader("Elige un archivo", type="txt")
 
-# Input
-st.markdown("## Upload the text file you want to summarize")
-
-uploaded_file = st.file_uploader("Choose a file", type="txt")
-
-       
-# Output
-st.markdown("### Here is your Summary:")
+# ------------------------------
+# Output: Resumen
+# ------------------------------
+st.markdown("### Aquí está tu resumen:")
 
 if uploaded_file is not None:
-    # To read file as bytes:
-    bytes_data = uploaded_file.getvalue()
-    #st.write(bytes_data)
-
-    # To convert to a string based IO:
+    # Leer archivo como string
     stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-    #st.write(stringio)
+    file_input = stringio.read()
 
-    # To read file as string:
-    string_data = stringio.read()
-    #st.write(string_data)
-
-    # Can be used wherever a "file-like" object is accepted:
-    #dataframe = pd.read_csv(uploaded_file)
-    #st.write(dataframe)
-
-    file_input = string_data
-
+    # Validación de longitud
     if len(file_input.split(" ")) > 20000:
-        st.write("Please enter a shorter file. The maximum length is 20000 words.")
+        st.write("Por favor ingresa un archivo más corto. Máximo 20,000 palabras.")
         st.stop()
 
-    if file_input:
-        if not openai_api_key:
-            st.warning('Please insert OpenAI API Key. \
-            Instructions [here](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)', 
-            icon="⚠️")
-            st.stop()
-
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n"], 
-        chunk_size=5000, 
-        chunk_overlap=350
+    # Validar API Key
+    if not openai_api_key:
+        st.warning(
+            'Por favor ingresa tu OpenAI API Key. Instrucciones [aquí](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)',
+            icon="⚠️"
         )
+        st.stop()
 
+    # Dividir texto en chunks
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators=["\n\n", "\n"],
+        chunk_size=5000,
+        chunk_overlap=350
+    )
     splitted_documents = text_splitter.create_documents([file_input])
 
+    # Cargar LLM
     llm = load_LLM(openai_api_key=openai_api_key)
 
+    # Cargar chain de resumen
     summarize_chain = load_summarize_chain(
-        llm=llm, 
+        llm=llm,
         chain_type="map_reduce"
-        )
+    )
 
+    # Ejecutar chain
     summary_output = summarize_chain.run(splitted_documents)
 
     st.write(summary_output)
+

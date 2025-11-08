@@ -1,61 +1,54 @@
 import streamlit as st
-from langchain.prompts import PromptTemplate
+import regex as re
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import LLMChain
-from langchain.llms import OpenAI
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import RetrievalQA
 
 # Configuración de la app
-st.set_page_config(page_title="Split and Summarize", layout="wide")
+st.set_page_config(page_title="Split & Summarize", layout="wide")
+st.title("Split & Summarize Documents")
 
-st.title("📄 Split & Summarize Documents")
-st.write("Sube un documento, divídelo en partes y genera un resumen con LLM.")
+# Sidebar
+st.sidebar.header("Configuración")
+openai_api_key = st.sidebar.text_input("API Key de OpenAI", type="password")
 
-# Cargar archivo
-uploaded_file = st.file_uploader("Selecciona un archivo de texto (.txt)", type="txt")
+# Subida de documentos
+uploaded_files = st.file_uploader("Sube tus documentos (PDF, TXT, DOCX)", accept_multiple_files=True)
 
-if uploaded_file:
-    text = uploaded_file.read().decode("utf-8")
-    
-    # Selector de tamaño de chunk
-    chunk_size = st.slider("Tamaño del chunk (caracteres)", 1000, 5000, 2000)
-    
-    # Dividir el texto en chunks
+if uploaded_files and openai_api_key:
+    texts = []
+    for file in uploaded_files:
+        # Lectura simple de TXT
+        try:
+            content = file.read().decode("utf-8", errors="ignore")
+            texts.append(content)
+        except Exception as e:
+            st.error(f"No se pudo leer {file.name}: {e}")
+
+    # Dividir el texto
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
+        chunk_size=1000,
         chunk_overlap=100
     )
-    chunks = text_splitter.split_text(text)
-    
-    st.write(f"El documento se dividió en **{len(chunks)}** partes.")
-    
-    # Mostrar primeros 2 chunks como ejemplo
-    for i, chunk in enumerate(chunks[:2]):
-        st.subheader(f"Chunk {i+1}")
-        st.write(chunk)
-    
-    # Resumen con LLM
-    st.subheader("Resumen del Documento")
-    
-    # Ingresar API Key de OpenAI
-    openai_api_key = st.text_input("Introduce tu OpenAI API Key", type="password")
-    
-    if openai_api_key:
-        llm = OpenAI(openai_api_key=openai_api_key, temperature=0)
-        
-        # Plantilla de resumen
-        template = """Resume el siguiente texto en español de manera clara y concisa:
+    docs = text_splitter.create_documents(texts)
 
-        {text_chunk}
-        """
-        prompt = PromptTemplate(input_variables=["text_chunk"], template=template)
-        chain = LLMChain(llm=llm, prompt=prompt)
-        
-        # Generar resúmenes por chunk y combinarlos
-        summaries = []
-        for chunk in chunks:
-            summary = chain.run(text_chunk=chunk)
-            summaries.append(summary)
-        
-        final_summary = "\n\n".join(summaries)
-        
-        st.text_area("Resumen final", value=final_summary, height=300)
+    # Embeddings
+    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+    vectorstore = FAISS.from_documents(docs, embeddings)
+
+    # Crear chain de QA
+    qa = RetrievalQA.from_chain_type(
+        llm=ChatOpenAI(openai_api_key=openai_api_key, temperature=0),
+        retriever=vectorstore.as_retriever(),
+        chain_type="stuff"
+    )
+
+    # Pregunta
+    query = st.text_input("Escribe tu pregunta sobre los documentos")
+    if query:
+        answer = qa.run(query)
+        st.write("**Respuesta:**", answer)
+else:
+    st.info("Sube archivos y proporciona tu API Key de OpenAI para empezar.")

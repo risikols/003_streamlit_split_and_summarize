@@ -1,72 +1,74 @@
+# main_streamlit_progress.py
 import streamlit as st
-from openai import OpenAI, OpenAIError
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from openai import OpenAI
+from openai.error import OpenAIError
+import time
 
-# Configuración del cliente OpenAI
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])  # API Key en Streamlit secrets
+# Inicializar cliente OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(page_title="PDF Split & Summarize", layout="wide")
-st.title("📄 PDF Split & Summarize (Map-Reduce)")
+st.title("📄 PDF Split & Summarize (con progreso)")
 
 uploaded_file = st.file_uploader("Sube tu PDF", type=["pdf"])
 
-if uploaded_file is not None:
+def summarize_text(text_chunk, model="gpt-3.5-turbo"):
+    """
+    Genera un resumen de un fragmento de texto usando OpenAI
+    """
     try:
-        # Leer PDF
-        reader = PdfReader(uploaded_file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() or ""
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Eres un asistente que resume texto largo en resúmenes claros y concisos."},
+                {"role": "user", "content": text_chunk}
+            ],
+            temperature=0.5
+        )
+        return response.choices[0].message.content
+    except OpenAIError as e:
+        st.error(f"Error con OpenAI: {e}")
+        return None
 
-        st.success(f"PDF cargado con {len(reader.pages)} páginas.")
+if uploaded_file:
+    # Leer PDF
+    pdf = PdfReader(uploaded_file)
+    text = ""
+    for page in pdf.pages:
+        text += page.extract_text() + "\n"
 
-        # Dividir el texto en fragmentos
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        texts = splitter.split_text(text)
-        st.write(f"Texto dividido en {len(texts)} fragmentos.")
+    # Dividir en fragmentos
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=100,
+        separators=["\n", " "]
+    )
+    chunks = splitter.split_text(text)
+    st.write(f"Texto dividido en {len(chunks)} fragmentos.")
 
-        # Botón para resumir PDF
-        if st.button("📝 Resumir PDF"):
-            partial_summaries = []
-            progress = st.progress(0)
+    # Crear barra de progreso
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-            # MAP: Resumir fragmentos individualmente
-            for i, chunk in enumerate(texts):
-                try:
-                    response = client.chat.completions.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "Eres un asistente que resume texto."},
-                            {"role": "user", "content": f"Resume este texto:\n\n{chunk}"}
-                        ],
-                        temperature=0.5
-                    )
-                    summary = response.choices[0].message.content
-                    partial_summaries.append(summary)
-                except OpenAIError as e:
-                    st.error(f"Error en fragmento {i+1}: {e}")
-                    partial_summaries.append("[Error al generar resumen]")
-                progress.progress((i + 1) / len(texts))
+    # Map step: resumir cada fragmento
+    summaries = []
+    for i, chunk in enumerate(chunks):
+        status_text.text(f"Procesando fragmento {i+1}/{len(chunks)}...")
+        summary = summarize_text(chunk, model="gpt-3.5-turbo")
+        if summary:
+            summaries.append(summary)
+        progress_bar.progress((i + 1) / len(chunks))
+        time.sleep(0.1)  # pequeño delay para que la barra se actualice
 
-            # REDUCE: Resumir todos los resúmenes parciales
-            combined_summaries = "\n\n".join(partial_summaries)
-            try:
-                final_response = client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "Eres un asistente que genera un resumen compacto de varios textos resumidos."},
-                        {"role": "user", "content": f"Resume los siguientes resúmenes:\n\n{combined_summaries}"}
-                    ],
-                    temperature=0.5
-                )
-                final_summary = final_response.choices[0].message.content
-            except OpenAIError as e:
-                st.error(f"Error generando resumen final: {e}")
-                final_summary = "[Error al generar resumen final]"
+    # Reduce step: resumir los resúmenes
+    if summaries:
+        combined_text = "\n".join(summaries)
+        st.write("Generando resumen final...")
+        final_summary = summarize_text(combined_text, model="gpt-3.5-turbo")
+        st.success("✅ Resumen final generado")
+        st.text_area("Resumen Final", final_summary, height=300)
 
-            st.subheader("Resumen completo del PDF (Map-Reduce)")
-            st.write(final_summary)
-
-    except Exception as e:
-        st.error(f"❌ Error procesando el PDF: {e}")
+    progress_bar.empty()
+    status_text.empty()

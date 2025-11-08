@@ -1,13 +1,13 @@
 import streamlit as st
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains.question_answering import load_qa_chain
-from langchain.llms import OpenAI
-from PyPDF2 import PdfReader
 import os
+from PyPDF2 import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+from langchain.llms import OpenAI
 
-# Configuración de la API de OpenAI
+# Configurar la API Key de OpenAI desde Secrets
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.warning("Por favor configura la variable de entorno OPENAI_API_KEY")
@@ -16,16 +16,18 @@ else:
 
 st.title("Resumen de documentos con LangChain y Streamlit")
 
+# Subida de archivo PDF
 uploaded_file = st.file_uploader("Sube tu archivo PDF", type="pdf")
 
 if uploaded_file:
+    # Leer texto del PDF
     pdf = PdfReader(uploaded_file)
     text = ""
     for page in pdf.pages:
         text += page.extract_text() or ""
 
-    if not text:
-        st.warning("No se pudo extraer texto del PDF.")
+    if not text.strip():
+        st.error("No se pudo extraer texto del PDF.")
     else:
         # Dividir el texto en fragmentos
         text_splitter = RecursiveCharacterTextSplitter(
@@ -39,13 +41,15 @@ if uploaded_file:
         vectorstore = FAISS.from_texts(chunks, embeddings)
 
         # Crear cadena de QA
-        llm = OpenAI()
-        qa_chain = load_qa_chain(llm, chain_type="stuff")
+        qa = RetrievalQA.from_chain_type(
+            llm=OpenAI(),
+            chain_type="stuff",
+            retriever=vectorstore.as_retriever()
+        )
 
         # Consulta al usuario
         query = st.text_input("Escribe tu pregunta sobre el PDF:")
         if query:
-            retriever = vectorstore.as_retriever()
-            docs = retriever.get_relevant_documents(query)
-            answer = qa_chain.run(input_documents=docs, question=query)
+            with st.spinner("Buscando respuesta..."):
+                answer = qa.run(query)
             st.write(answer)

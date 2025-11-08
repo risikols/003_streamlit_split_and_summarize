@@ -1,6 +1,6 @@
 streamlit==1.37.0
 regex>=2025.7.34
-rich>=14.2.0
+rich>=10.14.0,<14
 langchain>=1.0.5
 watchdog>=3.0.0
 faiss-cpu>=1.7.4

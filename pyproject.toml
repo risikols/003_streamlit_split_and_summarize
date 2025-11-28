@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "AI app to summarize long texts with OpenAI or simulate summaries"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
-# Deshabilitar modo paquete para evitar errores de instalación
+# Deshabilitar modo paquete para evitar errores de instalación en Streamlit Cloud
 packages = []
 
 [tool.poetry.dependencies]

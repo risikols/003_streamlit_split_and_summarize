@@ -1,12 +1,13 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-import openai
+from openai import OpenAI
+from openai.error import OpenAIError
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
-st.title("📝 PDF Summarizer con GPT-3.5")
+st.title("📝 PDF Summarizer con GPT-3.5 / GPT-4")
 
-# Cargar API Key desde Streamlit Secrets
-openai.api_key = st.secrets.get("OPENAI_API_KEY")
+# Inicializar cliente OpenAI
+client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
 
 # Subida de archivo
 uploaded_file = st.file_uploader("Sube tu PDF o TXT aquí", type=["pdf", "txt"])
@@ -35,21 +36,21 @@ if uploaded_file:
             with st.spinner("Generando resumen..."):
                 summary = ""
                 try:
-                    # Intentar llamada real a OpenAI
-                    response = openai.ChatCompletion.create(
+                    # Llamada a la nueva API de OpenAI
+                    response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
                             {"role": "system", "content": "Eres un asistente útil que resume textos."},
                             {"role": "user", "content": f"Resume este texto:\n{text}"}
                         ],
                         max_tokens=500,
-                        temperature=0.5,
+                        temperature=0.5
                     )
-                    summary = response['choices'][0]['message']['content']
+                    summary = response.choices[0].message.content
                     st.subheader("Resumen generado (real)")
                     st.write(summary)
-                except Exception as e:
-                    # Detectar si es falta de créditos u otro error
+
+                except OpenAIError as e:
                     if "insufficient_quota" in str(e):
                         st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI. Se mostrará un resumen simulado.")
                     else:

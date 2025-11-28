@@ -68,4 +68,3 @@ if uploaded_file:
                     st.subheader("Resumen simulado")
                     st.write(summary)
                     st.info("Introduce tu API Key para generar resúmenes reales y consumir tokens.")
-uce tu API Key para generar resúmenes reales y consumir tokens.")

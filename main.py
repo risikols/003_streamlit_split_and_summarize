@@ -6,17 +6,15 @@ from openai.error import OpenAIError, RateLimitError
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
 st.title("📝 PDF Summarizer con GPT (Tokens opcionales)")
 
-st.markdown(
-    """
+st.markdown("""
 - Introduce tu API Key de OpenAI para generar resúmenes reales.
 - Si no hay API Key o no hay tokens disponibles, la app generará un resumen simulado.
-"""
-)
+""")
 
-# Input de API Key opcional
+# Input opcional de API Key
 openai_api_key = st.text_input(
-    "Tu OpenAI API Key (opcional)", 
-    type="password", 
+    "Tu OpenAI API Key (opcional)",
+    type="password",
     placeholder="sk-XXXX..."
 )
 
@@ -39,8 +37,8 @@ if uploaded_file:
 
         if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
-                if openai_api_key:
-                    # Intentamos hacer resumen real con OpenAI
+                # Solo intentar OpenAI si hay API Key real
+                if openai_api_key and openai_api_key.strip():
                     try:
                         openai.api_key = openai_api_key
                         response = openai.ChatCompletion.create(
@@ -55,12 +53,14 @@ if uploaded_file:
                         summary = response['choices'][0]['message']['content']
                         st.subheader("Resumen generado")
                         st.write(summary)
+
                     except RateLimitError:
                         st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI.")
                     except OpenAIError as e:
                         st.warning(f"Ocurrió un error con OpenAI: {e}")
                     except Exception as e:
                         st.error(f"Error inesperado: {e}")
+
                 else:
                     # Resumen simulado
                     lines = text.strip().split("\n")

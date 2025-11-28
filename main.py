@@ -48,18 +48,13 @@ if uploaded_file:
                     summary = response['choices'][0]['message']['content']
                     st.subheader("Resumen generado (real)")
                     st.write(summary)
-                except openai.error.InvalidRequestError as e:
-                    # Si la API devuelve insufficient_quota
+                except Exception as e:
+                    # Detectar si es falta de créditos u otro error
                     if "insufficient_quota" in str(e):
                         st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI. Se mostrará un resumen simulado.")
-                        summary = text[:500] + "..." if len(text) > 500 else text
-                        st.subheader("Resumen simulado")
-                        st.write(summary)
                     else:
-                        st.error(f"Ocurrió un error en la API: {e}")
-                except Exception as e:
-                    # Otros errores de OpenAI
-                    st.warning("No se pudo generar un resumen real. Se mostrará un resumen simulado.")
+                        st.warning(f"No se pudo generar un resumen real: {e}")
+                    # Resumen simulado
                     summary = text[:500] + "..." if len(text) > 500 else text
                     st.subheader("Resumen simulado")
                     st.write(summary)

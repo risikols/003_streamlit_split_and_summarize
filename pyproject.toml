@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "003_streamlit_split_and_summarize"
 version = "1.0.0"
-description = "AI app to summarize PDFs and long texts with optional OpenAI GPT"
+description = "AI app to summarize long texts with OpenAI or simulate summaries"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
-# Para Streamlit Cloud, desactivamos la instalación de la propia app como paquete
+# Deshabilitar modo paquete para evitar errores de instalación
 packages = []
 
 [tool.poetry.dependencies]

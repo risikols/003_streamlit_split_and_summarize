@@ -2,29 +2,36 @@ import streamlit as st
 from PyPDF2 import PdfReader
 import openai
 
-# Configurar tu clave de OpenAI
-openai.api_key = st.secrets["OPENAI_API_KEY"]  # Usa Secrets de Streamlit para mayor seguridad
+# Configurar tu clave de OpenAI desde Secrets de Streamlit
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# Configuración de la página
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
 st.title("📝 PDF Summarizer con GPT-3.5")
 
+# Subida de archivo PDF
 uploaded_file = st.file_uploader("Sube tu PDF aquí", type=["pdf"])
 
 if uploaded_file:
+    # Leer el PDF
     reader = PdfReader(uploaded_file)
     text = ""
     for page in reader.pages:
-        text += page.extract_text() + "\n"
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text + "\n"
 
-    st.subheader("Texto extraído")
-    st.text_area("Contenido del PDF", text, height=300)
+    if not text.strip():
+        st.error("No se encontró texto en el PDF.")
+    else:
+        st.subheader("Texto extraído")
+        st.text_area("Contenido del PDF", text, height=300)
 
-    if st.button("Generar resumen"):
-        if not text.strip():
-            st.error("No se encontró texto en el PDF.")
-        else:
+        # Botón para generar resumen
+        if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
                 try:
+                    # Llamada a la API de OpenAI
                     response = openai.ChatCompletion.create(
                         model="gpt-3.5-turbo",
                         messages=[
@@ -39,3 +46,4 @@ if uploaded_file:
                     st.write(summary)
                 except Exception as e:
                     st.error(f"Ocurrió un error al generar el resumen: {e}")
+

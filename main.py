@@ -1,7 +1,7 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 import openai
-from openai.error import OpenAIError, RateLimitError
+from openai.error import OpenAIError, RateLimitError, InvalidRequestError
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
 st.title("📝 PDF Summarizer con GPT (Tokens opcionales)")
@@ -37,7 +37,6 @@ if uploaded_file:
 
         if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
-                # Solo intentar OpenAI si hay API Key real
                 if openai_api_key and openai_api_key.strip():
                     try:
                         openai.api_key = openai_api_key
@@ -55,16 +54,18 @@ if uploaded_file:
                         st.write(summary)
 
                     except RateLimitError:
-                        st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI.")
+                        st.warning("No hay suficientes tokens en tu cuenta de OpenAI.")
+                    except InvalidRequestError as e:
+                        # Esto captura errores por clave inválida o texto muy largo
+                        st.warning(f"Error con la solicitud a OpenAI: {e}")
                     except OpenAIError as e:
-                        st.warning(f"Ocurrió un error con OpenAI: {e}")
+                        st.warning(f"Error de OpenAI: {e}")
                     except Exception as e:
                         st.error(f"Error inesperado: {e}")
-
                 else:
                     # Resumen simulado
                     lines = text.strip().split("\n")
                     summary = "\n".join(lines[:3])
                     st.subheader("Resumen simulado")
                     st.write(summary)
-                    st.info("Introduce tu API Key para generar resúmenes reales y consumir tokens.")
+                    st.info("Introduce tu API Key válida para generar resúmenes reales y consumir tokens.")

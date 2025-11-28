@@ -1,11 +1,10 @@
 [tool.poetry]
 name = "003_streamlit_split_and_summarize"
 version = "1.0.0"
-description = "AI app to summarize long texts with OpenAI or simulate summaries"
+description = "AI app to summarize PDFs and TXT with OpenAI or simulate summaries"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
-# Deshabilitar modo paquete para evitar errores en Streamlit Cloud
-packages = []
+packages = []  # ✅ Deshabilitamos modo paquete para evitar errores en Streamlit Cloud
 
 [tool.poetry.dependencies]
 python = "^3.11"

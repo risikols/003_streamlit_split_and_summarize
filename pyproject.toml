@@ -4,7 +4,10 @@ version = "1.0.0"
 description = "AI app simulada para resumir PDFs sin usar OpenAI"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
-packages = []  # <-- desactiva la instalación como paquete
+packages = []          # <-- vacía para que no intente instalar el proyecto
+# package-mode false desactiva el modo paquete en algunas versiones de Poetry
+# (opcional según versión)
+# package-mode = false  
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -14,7 +17,6 @@ PyPDF2 = "^3.0.1"
 [build-system]
 requires = ["poetry-core>=1.3.0"]
 build-backend = "poetry.core.masonry.api"
-
 
 
 

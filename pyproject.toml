@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "003_streamlit_split_and_summarize"
 version = "1.0.0"
-description = "AI app to summarize long texts with GPT"
+description = "AI app to summarize PDFs with GPT"
 authors = ["Tu Nombre <tu@email.com>"]
 readme = "README.md"
 

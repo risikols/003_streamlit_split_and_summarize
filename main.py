@@ -3,73 +3,63 @@ from PyPDF2 import PdfReader
 import openai
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
-st.title("📝 PDF Summarizer con GPT (real o simulado)")
+st.title("📝 PDF Summarizer con GPT-3.5")
 
-st.markdown("""
-- Introduce tu API Key de OpenAI para generar resúmenes reales.
-- Si no hay API Key o no se puede usar, la app generará un **resumen simulado**.
-""")
+# Cargar API Key desde Streamlit Secrets
+openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
-# Input opcional de API Key
-openai_api_key = st.text_input(
-    "Tu OpenAI API Key (opcional)",
-    type="password",
-    placeholder="sk-XXXX..."
-)
+# Subida de archivo
+uploaded_file = st.file_uploader("Sube tu PDF o TXT aquí", type=["pdf", "txt"])
 
-# Subida de PDF
-uploaded_file = st.file_uploader("Sube tu PDF aquí", type=["pdf"])
+def extract_text(file):
+    if file.type == "application/pdf":
+        reader = PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text.strip()
+    else:
+        return file.getvalue().decode("utf-8").strip()
 
 if uploaded_file:
-    reader = PdfReader(uploaded_file)
-    text = ""
-    for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + "\n"
-
-    if not text.strip():
-        st.error("No se encontró texto en el PDF.")
+    text = extract_text(uploaded_file)
+    if not text:
+        st.error("No se encontró texto en el archivo.")
     else:
         st.subheader("Texto extraído")
-        st.text_area("Contenido del PDF", text, height=300)
+        st.text_area("Contenido del archivo", text, height=300)
 
         if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
-
-                # Si la clave está presente, intenta usar la API
-                if openai_api_key and openai_api_key.strip():
-                    try:
-                        openai.api_key = openai_api_key
-                        response = openai.chat.completions.create(
-                            model="gpt-3.5-turbo",
-                            messages=[
-                                {"role": "system", "content": "Eres un asistente útil que resume textos."},
-                                {"role": "user", "content": f"Resume este texto:\n{text}"}
-                            ],
-                            max_tokens=500,
-                            temperature=0.5,
-                        )
-                        summary = response.choices[0].message.content
-                        st.subheader("Resumen generado")
-                        st.write(summary)
-
-                    except Exception as e:
-                        msg = str(e)
-                        if "insufficient_quota" in msg or "Rate limit" in msg:
-                            st.warning("No hay suficientes tokens en tu cuenta de OpenAI.")
-                        else:
-                            st.warning(f"Error de OpenAI: {msg}")
-
-                        # Resumen simulado
-                        summary = "\n".join(text.strip().split("\n")[:3])
+                summary = ""
+                try:
+                    # Intentar llamada real a OpenAI
+                    response = openai.ChatCompletion.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {"role": "system", "content": "Eres un asistente útil que resume textos."},
+                            {"role": "user", "content": f"Resume este texto:\n{text}"}
+                        ],
+                        max_tokens=500,
+                        temperature=0.5,
+                    )
+                    summary = response['choices'][0]['message']['content']
+                    st.subheader("Resumen generado (real)")
+                    st.write(summary)
+                except openai.error.InvalidRequestError as e:
+                    # Si la API devuelve insufficient_quota
+                    if "insufficient_quota" in str(e):
+                        st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI. Se mostrará un resumen simulado.")
+                        summary = text[:500] + "..." if len(text) > 500 else text
                         st.subheader("Resumen simulado")
                         st.write(summary)
-
-                else:
-                    # Resumen simulado si no hay API Key
-                    summary = "\n".join(text.strip().split("\n")[:3])
+                    else:
+                        st.error(f"Ocurrió un error en la API: {e}")
+                except Exception as e:
+                    # Otros errores de OpenAI
+                    st.warning("No se pudo generar un resumen real. Se mostrará un resumen simulado.")
+                    summary = text[:500] + "..." if len(text) > 500 else text
                     st.subheader("Resumen simulado")
                     st.write(summary)
-                    st.info("Introduce tu API Key válida para generar resúmenes reales y consumir tokens.")
-

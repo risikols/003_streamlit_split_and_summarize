@@ -1,17 +1,16 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 import openai
+from openai.error import OpenAIError, RateLimitError
 
-# Configuración de la página
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
 st.title("📝 PDF Summarizer con GPT (Tokens opcionales)")
 
-# Instrucciones
 st.markdown(
     """
-    - Si tienes una **API Key de OpenAI**, introdúcela para generar resúmenes reales.
-    - Si no, la app generará un **resumen simulado** para probar la interfaz sin gastar tokens.
-    """
+- Introduce tu API Key de OpenAI para generar resúmenes reales.
+- Si no hay API Key o no hay tokens disponibles, la app generará un resumen simulado.
+"""
 )
 
 # Input de API Key opcional
@@ -41,7 +40,7 @@ if uploaded_file:
         if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
                 if openai_api_key:
-                    # Resumen real con OpenAI
+                    # Intentamos hacer resumen real con OpenAI
                     try:
                         openai.api_key = openai_api_key
                         response = openai.ChatCompletion.create(
@@ -56,12 +55,17 @@ if uploaded_file:
                         summary = response['choices'][0]['message']['content']
                         st.subheader("Resumen generado")
                         st.write(summary)
+                    except RateLimitError:
+                        st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI.")
+                    except OpenAIError as e:
+                        st.warning(f"Ocurrió un error con OpenAI: {e}")
                     except Exception as e:
-                        st.error(f"Ocurrió un error al generar el resumen: {e}")
+                        st.error(f"Error inesperado: {e}")
                 else:
-                    # Resumen simulado si no hay API Key
+                    # Resumen simulado
                     lines = text.strip().split("\n")
                     summary = "\n".join(lines[:3])
                     st.subheader("Resumen simulado")
                     st.write(summary)
                     st.info("Introduce tu API Key para generar resúmenes reales y consumir tokens.")
+uce tu API Key para generar resúmenes reales y consumir tokens.")

@@ -1,10 +1,14 @@
-# PDF Summarizer Simulado
+# PDF Summarizer con GPT
 
-Esta app de Streamlit permite subir un PDF y obtener un resumen simulado del texto.  
-No se usa OpenAI, por lo que **no se consumen tokens**.
+Esta app permite subir un PDF y generar un resumen de su contenido usando OpenAI GPT-3.5 o GPT-4.  
 
-## Uso
+## Cómo usarla
 
-1. Sube un archivo PDF.
-2. Visualiza el texto extraído.
-3. Pulsa "Generar resumen simulado" para ver un resumen de prueba.
+1. Sube tu archivo PDF.
+2. Si tienes **API Key de OpenAI**, introdúcela en la casilla para generar un resumen real.
+3. Si no introduces la API Key, la app generará un **resumen simulado** (primeras líneas del PDF) para probar la interfaz sin gastar tokens.
+
+## Notas
+
+- Asegúrate de que tu API Key tenga saldo disponible.
+- Puedes usar la app sin API Key para probar la interfaz y no consumir tokens.

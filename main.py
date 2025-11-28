@@ -1,10 +1,9 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from openai import OpenAI
-from openai.error import OpenAIError
+from openai import OpenAI, OpenAIError  # ✅ Import correcto para OpenAI >=1.0.0
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
-st.title("📝 PDF Summarizer con GPT-3.5 / GPT-4")
+st.title("📝 PDF/TXT Summarizer con GPT-3.5 / GPT-4")
 
 # Inicializar cliente OpenAI
 client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
@@ -13,6 +12,7 @@ client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
 uploaded_file = st.file_uploader("Sube tu PDF o TXT aquí", type=["pdf", "txt"])
 
 def extract_text(file):
+    """Extrae texto de PDF o TXT"""
     if file.type == "application/pdf":
         reader = PdfReader(file)
         text = ""
@@ -51,10 +51,12 @@ if uploaded_file:
                     st.write(summary)
 
                 except OpenAIError as e:
+                    # Control de error por falta de tokens
                     if "insufficient_quota" in str(e):
                         st.warning("No hay suficientes tokens disponibles en tu cuenta de OpenAI. Se mostrará un resumen simulado.")
                     else:
                         st.warning(f"No se pudo generar un resumen real: {e}")
+
                     # Resumen simulado
                     summary = text[:500] + "..." if len(text) > 500 else text
                     st.subheader("Resumen simulado")

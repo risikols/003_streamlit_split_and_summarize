@@ -8,7 +8,7 @@ st.title("📝 PDF Summarizer con GPT (real o simulado)")
 
 st.markdown("""
 - Introduce tu API Key de OpenAI para generar resúmenes reales.
-- Si no hay API Key o no se puede usar, la app generará un resumen simulado.
+- Si no hay API Key o no se puede usar, la app generará un **resumen simulado**.
 """)
 
 # Input opcional de API Key
@@ -85,4 +85,4 @@ if uploaded_file:
                     st.subheader("Resumen simulado")
                     st.write(summary)
                     st.info("Introduce tu API Key válida para generar resúmenes reales y consumir tokens.")
-s y consumir tokens.")
+

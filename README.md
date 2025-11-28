@@ -1,14 +1,13 @@
-# PDF Summarizer con GPT
+# PDF Summarizer con OpenAI (real o simulado)
 
-Esta app permite subir un PDF y generar un resumen de su contenido usando OpenAI GPT-3.5 o GPT-4.  
+Esta app permite subir archivos PDF y generar un resumen:
 
-## Cómo usarla
+- Si introduces una API Key válida de OpenAI y hay tokens disponibles, se generará un resumen real usando GPT-3.5.
+- Si no hay API Key o no hay tokens, la app genera un **resumen simulado** automáticamente.
 
-1. Sube tu archivo PDF.
-2. Si tienes **API Key de OpenAI**, introdúcela en la casilla para generar un resumen real.
-3. Si no introduces la API Key, la app generará un **resumen simulado** (primeras líneas del PDF) para probar la interfaz sin gastar tokens.
+## Cómo usar
 
-## Notas
-
-- Asegúrate de que tu API Key tenga saldo disponible.
-- Puedes usar la app sin API Key para probar la interfaz y no consumir tokens.
+1. Haz clic en **Upload PDF** y selecciona tu archivo.
+2. Introduce tu **API Key de OpenAI** (opcional, para resúmenes reales).
+3. Haz clic en **Generar resumen**.
+4. Visualiza el resumen generado en pantalla.

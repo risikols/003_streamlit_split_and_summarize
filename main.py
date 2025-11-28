@@ -1,14 +1,14 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 import openai
-from openai.error import OpenAIError, RateLimitError, InvalidRequestError
+from openai.error import RateLimitError, InvalidRequestError, OpenAIError
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
-st.title("📝 PDF Summarizer con GPT (Tokens opcionales)")
+st.title("📝 PDF Summarizer con GPT (real o simulado)")
 
 st.markdown("""
 - Introduce tu API Key de OpenAI para generar resúmenes reales.
-- Si no hay API Key o no hay tokens disponibles, la app generará un resumen simulado.
+- Si no hay API Key o no se puede usar, la app generará un resumen simulado.
 """)
 
 # Input opcional de API Key
@@ -37,6 +37,8 @@ if uploaded_file:
 
         if st.button("Generar resumen"):
             with st.spinner("Generando resumen..."):
+
+                # Si la clave está presente, intenta usar la API
                 if openai_api_key and openai_api_key.strip():
                     try:
                         openai.api_key = openai_api_key
@@ -55,17 +57,32 @@ if uploaded_file:
 
                     except RateLimitError:
                         st.warning("No hay suficientes tokens en tu cuenta de OpenAI.")
+                        summary = "\n".join(text.strip().split("\n")[:3])
+                        st.subheader("Resumen simulado")
+                        st.write(summary)
+
                     except InvalidRequestError as e:
-                        # Esto captura errores por clave inválida o texto muy largo
-                        st.warning(f"Error con la solicitud a OpenAI: {e}")
+                        st.warning(f"Error en la solicitud a OpenAI: {e}")
+                        summary = "\n".join(text.strip().split("\n")[:3])
+                        st.subheader("Resumen simulado")
+                        st.write(summary)
+
                     except OpenAIError as e:
                         st.warning(f"Error de OpenAI: {e}")
+                        summary = "\n".join(text.strip().split("\n")[:3])
+                        st.subheader("Resumen simulado")
+                        st.write(summary)
+
                     except Exception as e:
                         st.error(f"Error inesperado: {e}")
+                        summary = "\n".join(text.strip().split("\n")[:3])
+                        st.subheader("Resumen simulado")
+                        st.write(summary)
+
                 else:
-                    # Resumen simulado
-                    lines = text.strip().split("\n")
-                    summary = "\n".join(lines[:3])
+                    # Resumen simulado si no hay API Key
+                    summary = "\n".join(text.strip().split("\n")[:3])
                     st.subheader("Resumen simulado")
                     st.write(summary)
                     st.info("Introduce tu API Key válida para generar resúmenes reales y consumir tokens.")
+s y consumir tokens.")

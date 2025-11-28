@@ -1,7 +1,7 @@
 import streamlit as st
 from PyPDF2 import PdfReader
 import openai
-from openai.error import RateLimitError, InvalidRequestError, OpenAIError
+from openai.error import OpenAIError  # Solo la genérica
 
 st.set_page_config(page_title="PDF Summarizer", layout="wide")
 st.title("📝 PDF Summarizer con GPT (real o simulado)")
@@ -42,7 +42,7 @@ if uploaded_file:
                 if openai_api_key and openai_api_key.strip():
                     try:
                         openai.api_key = openai_api_key
-                        response = openai.ChatCompletion.create(
+                        response = openai.chat.completions.create(
                             model="gpt-3.5-turbo",
                             messages=[
                                 {"role": "system", "content": "Eres un asistente útil que resume textos."},
@@ -51,24 +51,17 @@ if uploaded_file:
                             max_tokens=500,
                             temperature=0.5,
                         )
-                        summary = response['choices'][0]['message']['content']
+                        summary = response.choices[0].message.content
                         st.subheader("Resumen generado")
                         st.write(summary)
 
-                    except RateLimitError:
-                        st.warning("No hay suficientes tokens en tu cuenta de OpenAI.")
-                        summary = "\n".join(text.strip().split("\n")[:3])
-                        st.subheader("Resumen simulado")
-                        st.write(summary)
-
-                    except InvalidRequestError as e:
-                        st.warning(f"Error en la solicitud a OpenAI: {e}")
-                        summary = "\n".join(text.strip().split("\n")[:3])
-                        st.subheader("Resumen simulado")
-                        st.write(summary)
-
                     except OpenAIError as e:
-                        st.warning(f"Error de OpenAI: {e}")
+                        # Aquí capturamos cualquier error de OpenAI, incluyendo falta de tokens
+                        if "insufficient_quota" in str(e) or "Rate limit" in str(e):
+                            st.warning("No hay suficientes tokens en tu cuenta de OpenAI.")
+                        else:
+                            st.warning(f"Error de OpenAI: {e}")
+
                         summary = "\n".join(text.strip().split("\n")[:3])
                         st.subheader("Resumen simulado")
                         st.write(summary)
@@ -85,4 +78,3 @@ if uploaded_file:
                     st.subheader("Resumen simulado")
                     st.write(summary)
                     st.info("Introduce tu API Key válida para generar resúmenes reales y consumir tokens.")
-

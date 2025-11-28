@@ -24,8 +24,7 @@ if uploaded_file:
 
         if st.button("Generar resumen simulado"):
             with st.spinner("Generando resumen simulado..."):
-                # Aquí no llamamos a OpenAI, hacemos un resumen de prueba
-                # Por ejemplo, tomamos las primeras 3 líneas
+                # Resumen simulado: primeras 3 líneas del texto
                 lines = text.strip().split("\n")
                 summary = "\n".join(lines[:3])
                 
